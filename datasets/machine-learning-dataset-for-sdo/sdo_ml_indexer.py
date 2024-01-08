@@ -25,7 +25,7 @@ def extract(file_names, target_dir):
         parts = file_name.name.split("_")
         instrument = parts[0]
         channel = parts[1]
-        year = parts[2][0:4]
+        year = parts[2][:4]
         month = parts[2][4:6]
 
         try:
@@ -36,7 +36,7 @@ def extract(file_names, target_dir):
 
 
 def index(data_dir):
-    data_files = list(Path(data_dir).rglob(f'*.npz'))
+    data_files = list(Path(data_dir).rglob('*.npz'))
     csv_fieldnames = ['path', 'file_name',
                       "instrument", "channel",  "timestamp"]
 
@@ -51,18 +51,18 @@ def index(data_dir):
         date_format = '%Y%m%d%H%M'
         for data_file in data_files:
             file_name_parts = data_file.name.split("_")
-            instrument = file_name_parts[0][0:3]
+            instrument = file_name_parts[0][:3]
             channel = file_name_parts[2].split(".")[0]
-            datetime_str = file_name_parts[0][3:11] + file_name_parts[1][0:4]
+            datetime_str = file_name_parts[0][3:11] + file_name_parts[1][:4]
             timestamp = dt.datetime.strptime(datetime_str, date_format)
 
-            label = {}
-            label["path"] = data_file
-            label["file_name"] = data_file.name
-            label["instrument"] = instrument
-            label["channel"] = channel
-            label["timestamp"] = timestamp.isoformat()
-
+            label = {
+                "path": data_file,
+                "file_name": data_file.name,
+                "instrument": instrument,
+                "channel": channel,
+                "timestamp": timestamp.isoformat(),
+            }
             writer.writerow(label)
 
 
@@ -104,14 +104,8 @@ def get_date_ranges(start, end):
     if len(start_dates) == 0:
         return [(adjusted_start, adjusted_end)]
 
-    ranges = []
-    for s, e in zip(start_dates, end_dates):
-        ranges.append((s, e))
-
-    if len(ranges) == 0:
-        return [(adjusted_start, adjusted_end)]
-
-    return ranges
+    ranges = list(zip(start_dates, end_dates))
+    return [(adjusted_start, adjusted_end)] if not ranges else ranges
 
 
 goes_cache = {}
@@ -135,9 +129,7 @@ def fetch_goes_metadata(start, end, path):
                 download_result = Fido.fetch(search_result)
                 goes_ts = ts.TimeSeries(download_result)
                 if isinstance(goes_ts, list) and len(goes_ts) > 0:
-                    frames = []
-                    for goes_ts_frm in goes_ts:
-                        frames.append(goes_ts_frm.to_dataframe())
+                    frames = [goes_ts_frm.to_dataframe() for goes_ts_frm in goes_ts]
                     goes_ts_df = pd.concat(frames)
                 else:
                     goes_ts_df = goes_ts.to_dataframe()
@@ -216,7 +208,7 @@ def get_goes_at(at, goes_dir):
 @click.option('--data-dir',  type=click.Path(exists=True, file_okay=False, readable=True), default="/mnt/data02/sdo/stanford_machine_learning_dataset_for_sdo", help='directory containing the compressed dataset (tar files)')
 @click.option('--target-dir',  type=click.Path(writable=True), default="/mnt/data02/sdo/stanford_machine_learning_dataset_for_sdo_extracted", help='target path for the extracted dataset')
 def cli(should_extract, data_dir, target_dir):
-    file_names = set(Path(data_dir).rglob(f'*.tar'))
+    file_names = set(Path(data_dir).rglob('*.tar'))
 
     if should_extract:
         print(f"extracting files from {data_dir} to {target_dir}")
