@@ -234,15 +234,15 @@ class SpatioTemporalEvent:
         self.__kb_archivid = kb_archivid
 
     def to_dict(self):
-        dict = {'event_type': self.event_type,
-                'start_time': self.start_time,
-                'end_time': self.end_time,
-                'hpc_coord': self.hpc_coord,
-                'hpc_bbox': self.hpc_bbox,
-                'hpc_boundcc': self.hpc_boundcc,
-                'kb_archivid': self.kb_archivid
-                }
-        return dict
+        return {
+            'event_type': self.event_type,
+            'start_time': self.start_time,
+            'end_time': self.end_time,
+            'hpc_coord': self.hpc_coord,
+            'hpc_bbox': self.hpc_bbox,
+            'hpc_boundcc': self.hpc_boundcc,
+            'kb_archivid': self.kb_archivid,
+        }
 
 
 def convert_boundingpoints_to_pixelunit(polygon: Polygon, cdelt1, cdelt2, crpix1, crpix2, shrinkage_ratio=1):
@@ -362,11 +362,7 @@ def get_date_ranges(start, end, freq="d"):
     ranges = []
     for i in range(0, len(dates) - 1):
         t_start = dates[i]
-        if(i < len(dates) - 1):
-            t_end = dates[i + 1]
-        else:
-            t_end = end
-
+        t_end = dates[i + 1] if (i < len(dates) - 1) else end
         ranges.append((t_start, t_end))
 
     return ranges
@@ -480,12 +476,10 @@ def save_mask_file(img_path, target_path, hek_polygons, channel_name, display_im
                 get_clip(X, channel_name))
 
         img = Image.fromarray(V)
-        img_draw = ImageDraw.Draw(img)
     else:
         # https://pillow.readthedocs.io/en/stable/handbook/concepts.html#concept-modes
         img = Image.new("P", (512, 512), 0)  # initialze a black canvas
-        img_draw = ImageDraw.Draw(img)
-
+    img_draw = ImageDraw.Draw(img)
     fig = plt.figure()
 
     for poly in hek_polygons:
@@ -622,7 +616,7 @@ def create_ae_dataset(data_path, target_path, db_connection_string, event_types,
                 Path(row["file_name"] + ".png")
 
             if os.path.isfile(target_image_path):
-                logger.info(f"file exists, skipping")
+                logger.info("file exists, skipping")
                 continue
 
             if not os.path.exists(target_image_dir):
@@ -632,7 +626,7 @@ def create_ae_dataset(data_path, target_path, db_connection_string, event_types,
             events_df = find_events_at(
                 ts, db_connection_string, event_types=[event_type])
             if len(events_df) < 1:
-                logger.warning(f"no events found")
+                logger.warning("no events found")
                 continue
 
             # filter events that were observed in the respective wavelength, possibly also filter by feature extraction method
